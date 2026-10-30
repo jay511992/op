@@ -21,6 +21,13 @@ python build.py -t Debug
 # Skip dependency bootstrapping (already have vcpkg + BlackBone)
 python build.py --no-bootstrap-deps
 
+# Skip GoogleTest targets (~130 MB less objects per arch; run without the flag to re-enable)
+python build.py --no-tests
+
+# Trim regenerable build caches (keeps opencv/install + vcpkg/installed static libs)
+python scripts/prune_build.py --dry-run
+python scripts/prune_build.py --tests --opencv-source
+
 # Direct CMake build (after build.py has set up the build directory)
 cmake --build build/vs2022-x64-Release --config Release
 cmake --build build/vs2022-x86-Release --config Release

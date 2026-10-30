@@ -318,3 +318,6 @@ swig/pyop.py
 .venv*
 
 SKILL.md
+
+# release artifacts built by scripts/make_source_package.py
+dist/

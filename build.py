@@ -928,6 +928,11 @@ examples:
         action="store_true",
         help="Bootstrap dependencies and exit before configuring the main project",
     )
+    parser.add_argument(
+        "--no-tests",
+        action="store_true",
+        help="Skip GoogleTest targets (-DOP_BUILD_TESTS=OFF); saves ~130 MB of objects per arch",
+    )
     args = parser.parse_args()
     ensure_cmake_on_path()
 
@@ -945,6 +950,7 @@ examples:
     print(f"    Generator:    {generator} ({gen_info['cmake']})")
     print(f"    Architecture: {arch}")
     print(f"    BootstrapDeps:{'No' if args.no_bootstrap_deps else 'Yes'}")
+    print(f"    Tests:        {'No' if args.no_tests else 'Yes'}")
     print("=" * 60)
 
     # ── Bootstrap dependencies ──
@@ -1024,6 +1030,9 @@ examples:
         opencv_args.append(f"-DOPENCV_ROOT={selected_opencv_root}")
         opencv_args.append(f"-DOPENCV_LIB_SUFFIX={OPENCV_LIB_SUFFIX}")
 
+    # 显式传 ON/OFF：只传 OFF 会让缓存永久停在 OFF，之后不加 --no-tests 也回不来。
+    tests_args: list[str] = ["-DOP_BUILD_TESTS=" + ("OFF" if args.no_tests else "ON")]
+
     # ── Prepare build directory ──
     # Keep architecture/generator isolated to avoid CMake cache platform clashes
     # (e.g. Win32 vs x64 in the same binary dir).
@@ -1045,6 +1054,7 @@ examples:
         *vcpkg_args,
         *blackbone_args,
         *opencv_args,
+        *tests_args,
     ]
     if gen_info["ide"]:
         cmake_cmd += ["-A", "x64" if arch == "x64" else "Win32"]
