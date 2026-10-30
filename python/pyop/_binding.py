@@ -428,6 +428,9 @@ class Op(object):
     def FindPicExS(self, x1, y1, x2, y2, files, delta_color, sim, dir):
         return _pyop.Op_FindPicExS(self, x1, y1, x2, y2, files, delta_color, sim, dir)
 
+    def SetFindPicColor(self, enable):
+        return _pyop.Op_SetFindPicColor(self, enable)
+
     def FindColorBlock(self, x1, y1, x2, y2, color, sim, count, height, width):
         return _pyop.Op_FindColorBlock(self, x1, y1, x2, y2, color, sim, count, height, width)
 

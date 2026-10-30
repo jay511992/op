@@ -248,6 +248,10 @@ int OP_CALL OpEnablePicCache(op_handle handle, int enable) {
     return call_ret(handle, [&](op::Op &op, long *ret) { op.EnablePicCache(enable, ret); });
 }
 
+int OP_CALL OpSetFindPicColor(op_handle handle, int enable) {
+    return call_ret(handle, [&](op::Op &op, long *ret) { op.SetFindPicColor(enable, ret); });
+}
+
 int OP_CALL OpCapturePre(op_handle handle, const wchar_t *file_name) {
     return call_ret(handle, [&](op::Op &op, long *ret) { op.CapturePre(safe_text(file_name), ret); });
 }

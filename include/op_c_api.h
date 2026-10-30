@@ -45,6 +45,7 @@ OP_C_API int OP_CALL OpSetShowErrorMsg(op_handle handle, int show_type);
 OP_C_API int OP_CALL OpSleep(op_handle handle, int millseconds);
 OP_C_API int OP_CALL OpInjectDll(op_handle handle, const wchar_t *process_name, const wchar_t *dll_name);
 OP_C_API int OP_CALL OpEnablePicCache(op_handle handle, int enable);
+OP_C_API int OP_CALL OpSetFindPicColor(op_handle handle, int enable);
 OP_C_API int OP_CALL OpCapturePre(op_handle handle, const wchar_t *file_name);
 OP_C_API int OP_CALL OpSetScreenDataMode(op_handle handle, int mode);
 

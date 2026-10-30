@@ -29,6 +29,11 @@ void op::Op::EnablePicCache(long enable, long *ret) {
     internal::set_result(ret, 1L);
 }
 
+void op::Op::SetFindPicColor(long enable, long *ret) {
+    m_context->image_proc.set_pic_color_match(enable != 0);
+    internal::set_result(ret, 1L);
+}
+
 void op::Op::CapturePre(const wchar_t *file, LONG *ret) {
     internal::set_result(ret, m_context->image_proc.Capture(internal::wstr(file)));
 }

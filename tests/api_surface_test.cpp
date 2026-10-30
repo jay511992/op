@@ -160,6 +160,11 @@ TEST_F(ApiSurfaceTest, ScalarMemoryAndStateApisWork) {
     op_.EnablePicCache(0, &ret_);
     EXPECT_EQ(ret_, 1);
 
+    op_.SetFindPicColor(1, &ret_);
+    EXPECT_EQ(ret_, 1);
+    op_.SetFindPicColor(0, &ret_);
+    EXPECT_EQ(ret_, 1);
+
     // Delays 是随机延时：验证落在区间内，而不是"睡够了就行"
     const auto t0 = std::chrono::steady_clock::now();
     op_.Delays(10, 20, &ret_);

@@ -128,6 +128,7 @@ def _bind(dll: ctypes.WinDLL) -> ctypes.WinDLL:
         ("OpSleep", c_int, [op_handle, c_int]),
         ("OpInjectDll", c_int, [op_handle, c_wchar_p, c_wchar_p]),
         ("OpEnablePicCache", c_int, [op_handle, c_int]),
+        ("OpSetFindPicColor", c_int, [op_handle, c_int]),
         ("OpCapturePre", c_int, [op_handle, c_wchar_p]),
         ("OpSetScreenDataMode", c_int, [op_handle, c_int]),
         ("OpAStarFindPath", c_wchar_p, [op_handle, c_int, c_int, c_wchar_p, c_int, c_int, c_int, c_int]),

@@ -183,6 +183,15 @@ func (o *Op) EnablePicCache(enable int) int {
 	return int(ret)
 }
 
+func (o *Op) SetFindPicColor(enable int) int {
+	if !o.valid() {
+		return 0
+	}
+
+	ret, _, _ := procSetFindPicColor.Call(o.handle, uintptr(enable))
+	return int(ret)
+}
+
 func (o *Op) CapturePre(fileName string) int {
 	if !o.valid() {
 		return 0

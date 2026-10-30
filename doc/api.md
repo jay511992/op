@@ -64,7 +64,7 @@ if (ret != 1) {
 例外：这些指针属于**单个句柄**，不同 `op_handle` 之间互不干扰，多线程各持一个句柄是安全的。
 
 这一段约定踩过两次坑：§72.48 修的是入参自别名（`OpGetWordResultStr` 的第一个参数就是上一次
-返回值，清理缓冲会把入参抹成空串），§72.57 修的是短字符串（≤7 个 wchar，如 `GetColor` 的
+返回值，清理缓冲会把入参抹成空串），§72.58 修的是短字符串（≤7 个 wchar，如 `GetColor` 的
 `RRGGBB`）落在 `std::wstring` 的 SSO 里、`swap` 换不掉 buffer 地址，于是「上一轮」那份缓冲
 照样被改写 —— 换成槽位池之后才真正成立。
 
@@ -94,10 +94,10 @@ op.UnBindWindow(&ret);
 | [运行时与算法](api/01-runtime.md) | 基本设置/属性、algorithm | 14 |
 | [窗口与进程](api/02-window.md) | windows api、Background | 47 |
 | [鼠标与键盘](api/03-input.md) | mouse & keyboard | 45 |
-| [图像与颜色](api/04-image.md) | image and color | 22 |
+| [图像与颜色](api/04-image.md) | image and color | 23 |
 | [OpenCV](api/05-opencv.md) | opcv | 35 |
 | [OCR 与 YOLO](api/06-ocr.md) | ocr | 51 |
-| **合计** | | **214** |
+| **合计** | | **215** |
 
 每个方法都带签名和一句说明；说明来自头文件注释，头文件没写注释的由 `scripts/gen_api_doc.py` 的 `EXTRA_DOC` 对着实现补。
 

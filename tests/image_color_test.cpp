@@ -652,6 +652,76 @@ TEST(ImageColorTest, FindPicTransparentOddPointsCountsCenterMismatchOnce) {
     EXPECT_EQ(y, top);
 }
 
+TEST(ImageColorTest, FindPicColorSwitchDistinguishesSameLumaDifferentHue) {
+    op::Op op;
+    long ret = 0;
+    const int width = 20;
+    const int height = 10;
+    // 红(255,0,0) 与 绿(0,129,0) 的 BT.601 灰度都是 76，红绿互换后灰度图逐像素相同。
+    const int target_x = 6;
+    const int target_y = 2;
+    auto screen = MakePixels(width, height, 0xff, 0xff, 0xff);
+    for (int y = 0; y < 4; ++y) {
+        for (int x = 0; x < 4; ++x) {
+            const bool even = ((x + y) % 2) == 0;
+            PaintPixel(screen, width, target_x + x, target_y + y, 0x00, even ? 0x00 : 0x81, even ? 0xff : 0x00);
+        }
+    }
+    auto screen_bmp = BuildBmp32TopDown(width, height, screen);
+    wstring mode = L"mem:" + PtrToWString(screen_bmp.data());
+    op.SetDisplayInput(mode.c_str(), &ret);
+    ASSERT_EQ(ret, 1);
+
+    vector<uchar> tpl(static_cast<size_t>(4) * 4 * 4, 0xff);
+    for (int y = 0; y < 4; ++y) {
+        for (int x = 0; x < 4; ++x) {
+            const bool even = ((x + y) % 2) == 0;
+            PaintPixel(tpl, 4, x, y, 0x00, even ? 0x81 : 0x00, even ? 0x00 : 0xff);
+        }
+    }
+    auto tpl_bmp = BuildBmp32TopDown(4, 4, tpl);
+    op.LoadMemPic(L"findpic_color_switch", tpl_bmp.data(), static_cast<long>(tpl_bmp.size()), &ret);
+    ASSERT_EQ(ret, 1);
+
+    long x = -1;
+    long y = -1;
+
+    // 默认是灰度比较：颜色虽然全反了，灰度完全一致，所以必须命中。
+    op.FindPic(0, 0, width, height, L"findpic_color_switch", L"0A0A0A", 1.0, 0, &x, &y, &ret);
+    EXPECT_EQ(ret, 0) << "默认应保持灰度比较并命中";
+    EXPECT_EQ(x, target_x);
+    EXPECT_EQ(y, target_y);
+
+    long color_ret = 0;
+    op.SetFindPicColor(1, &color_ret);
+    ASSERT_EQ(color_ret, 1);
+
+    // 彩色比较：每个像素至少差 129，远超 10 的容差，必须拒绝。
+    x = -1;
+    y = -1;
+    op.FindPic(0, 0, width, height, L"findpic_color_switch", L"0A0A0A", 1.0, 0, &x, &y, &ret);
+    EXPECT_EQ(ret, -1) << "彩色模式不应命中灰度相同但颜色不同的目标";
+    EXPECT_EQ(x, -1);
+    EXPECT_EQ(y, -1);
+
+    // 关掉开关后回到旧行为。
+    op.SetFindPicColor(0, &color_ret);
+    ASSERT_EQ(color_ret, 1);
+    x = -1;
+    y = -1;
+    op.FindPic(0, 0, width, height, L"findpic_color_switch", L"0A0A0A", 1.0, 0, &x, &y, &ret);
+    EXPECT_EQ(ret, 0);
+    EXPECT_EQ(x, target_x);
+    EXPECT_EQ(y, target_y);
+
+    // C API 出口同样能切，别让 Python/Go 那条链路拿不到这个行为。
+    op_handle handle = OpCreate();
+    ASSERT_NE(static_cast<op_handle>(nullptr), handle);
+    EXPECT_EQ(OpSetFindPicColor(handle, 1), 1);
+    EXPECT_EQ(OpSetFindPicColor(handle, 0), 1);
+    OpDestroy(handle);
+}
+
 TEST(ImageColorTest, FetchWordUsesProvidedWordName) {
     op::Op op;
     long ret = 0;

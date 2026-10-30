@@ -724,8 +724,7 @@ long ImageSearchAlgorithms::FindPic(std::vector<PicMatchTemplate *> &pics, color
             continue;
         const int max_err_ct = static_cast<int>((pic->height * pic->width - use_ts_match) * (1.0 - sim));
         if (for_each_scan_point(matchRect, dir, [&](int j, int i) {
-                int match_ret = (use_ts_match ? trans_match<false>(j, i, pic, dfcolor, match->transparent_points, max_err_ct)
-                                              : real_match(j, i, &match->gray, match->gray_norm, sim));
+                int match_ret = match_at(j, i, match, dfcolor, max_err_ct, sim);
                 if (match_ret) {
                     x = j + _x1 + _dx;
                     y = i + _y1 + _dy;
@@ -749,8 +748,11 @@ long ImageSearchAlgorithms::FindPicTh(std::vector<Image *> &pics, color_t dfcolo
 long ImageSearchAlgorithms::FindPicTh(std::vector<PicMatchTemplate *> &pics, color_t dfcolor, double sim, long dir,
                                       long &x, long &y) {
     x = y = -1;
-    _gray.fromImage4(_src);
-    record_sum(_gray);
+    // 彩色模式不建灰度图和积分图，省掉一次全屏灰度转换和一次积分图遍历。
+    if (!_pic_color_match) {
+        _gray.fromImage4(_src);
+        record_sum(_gray);
+    }
     std::vector<rect_t> blocks;
     // 将小循环放在最外面，提高处理速度
     for (size_t pic_id = 0; pic_id < pics.size(); ++pic_id) {
@@ -759,7 +761,6 @@ long ImageSearchAlgorithms::FindPicTh(std::vector<PicMatchTemplate *> &pics, col
             continue;
         auto pic = match->image;
         const int use_ts_match = match->transparent_count;
-        auto pgimg = &match->gray;
         rect_t matchRect(0, 0, _src.width, _src.height);
         matchRect.shrinkRect(pic->width, pic->height);
         if (!matchRect.valid())
@@ -772,14 +773,10 @@ long ImageSearchAlgorithms::FindPicTh(std::vector<PicMatchTemplate *> &pics, col
         results.reserve(blocks.size());
         for (size_t i = 0; i < blocks.size(); ++i) {
             results.push_back(SharedThreadPool().enqueue(
-                [this, dfcolor, dir, match, pgimg, matchRect, max_err_ct](rect_t block, Image *pic, int use_ts_match,
-                                                                          double sim) {
+                [this, dfcolor, dir, match, matchRect, max_err_ct](rect_t block, double sim) {
                     point_t found(-1, -1);
                     for_each_scan_point(block, dir, matchRect, [&](int j, int i) {
-                        int match_ret =
-                            (use_ts_match ? trans_match<false>(j, i, pic, dfcolor, match->transparent_points, max_err_ct)
-                                          : real_match(j, i, pgimg, match->gray_norm, sim));
-                        if (match_ret) {
+                        if (match_at(j, i, match, dfcolor, max_err_ct, sim)) {
                             found = point_t(j + _x1 + _dx, i + _y1 + _dy);
                             return true;
                         }
@@ -789,7 +786,7 @@ long ImageSearchAlgorithms::FindPicTh(std::vector<PicMatchTemplate *> &pics, col
                         return found;
                     return point_t(-1, -1);
                 },
-                blocks[i], pic, use_ts_match, sim));
+                blocks[i], sim));
             // results.push_back(r);
         }
         // wait all
@@ -822,8 +819,11 @@ long ImageSearchAlgorithms::FindPicEx(std::vector<PicMatchTemplate *> &pics, col
                                       vpoint_desc_t &vpd) {
     vpd.clear();
     int match_ret = 0;
-    _gray.fromImage4(_src);
-    record_sum(_gray);
+    // 彩色模式不建灰度图和积分图，省掉一次全屏灰度转换和一次积分图遍历。
+    if (!_pic_color_match) {
+        _gray.fromImage4(_src);
+        record_sum(_gray);
+    }
     for (size_t pic_id = 0; pic_id < pics.size(); ++pic_id) {
         auto match = pics[pic_id];
         if (!match || !match->image)
@@ -838,8 +838,7 @@ long ImageSearchAlgorithms::FindPicEx(std::vector<PicMatchTemplate *> &pics, col
         const int max_err_ct = static_cast<int>((pic->height * pic->width - use_ts_match) * (1.0 - sim));
         for (int i = matchRect.y1; i < matchRect.y2; ++i) {
             for (int j = matchRect.x1; j < matchRect.x2; ++j) {
-                match_ret = (use_ts_match ? trans_match<false>(j, i, pic, dfcolor, match->transparent_points, max_err_ct)
-                                          : real_match(j, i, &match->gray, match->gray_norm, sim));
+                match_ret = match_at(j, i, match, dfcolor, max_err_ct, sim);
                 if (match_ret) {
                     point_desc_t pd = {static_cast<int>(pic_id), point_t(j + _x1 + _dx, i + _y1 + _dy)};
 
@@ -864,8 +863,11 @@ long ImageSearchAlgorithms::FindPicExTh(std::vector<Image *> &pics, color_t dfco
 long ImageSearchAlgorithms::FindPicExTh(std::vector<PicMatchTemplate *> &pics, color_t dfcolor, double sim, long dir,
                                         vpoint_desc_t &vpd) {
     vpd.clear();
-    _gray.fromImage4(_src);
-    record_sum(_gray);
+    // 彩色模式不建灰度图和积分图，省掉一次全屏灰度转换和一次积分图遍历。
+    if (!_pic_color_match) {
+        _gray.fromImage4(_src);
+        record_sum(_gray);
+    }
     std::vector<rect_t> blocks;
     // 将小循环放在最外面，提高处理速度
     for (size_t pic_id = 0; pic_id < pics.size(); ++pic_id) {
@@ -874,7 +876,6 @@ long ImageSearchAlgorithms::FindPicExTh(std::vector<PicMatchTemplate *> &pics, c
             continue;
         auto pic = match->image;
         const int use_ts_match = match->transparent_count;
-        auto pgimg = &match->gray;
         rect_t matchRect(0, 0, _src.width, _src.height);
         matchRect.shrinkRect(pic->width, pic->height);
         if (!matchRect.valid())
@@ -887,16 +888,11 @@ long ImageSearchAlgorithms::FindPicExTh(std::vector<PicMatchTemplate *> &pics, c
         results.reserve(blocks.size());
         for (size_t i = 0; i < blocks.size(); ++i) {
             results.push_back(SharedThreadPool().enqueue(
-                [this, dfcolor, match, pgimg, max_err_ct](rect_t block, Image *pic, int use_ts_match,
-                                                          double sim) -> vpoint_t {
+                [this, dfcolor, match, max_err_ct](rect_t block, double sim) -> vpoint_t {
                     vpoint_t vp;
                     for (int i = block.y1; i < block.y2; ++i) {
                         for (int j = block.x1; j < block.x2; ++j) {
-                            int match_ret =
-                                (use_ts_match
-                                     ? trans_match<false>(j, i, pic, dfcolor, match->transparent_points, max_err_ct)
-                                     : real_match(j, i, pgimg, match->gray_norm, sim));
-                            if (match_ret) {
+                            if (match_at(j, i, match, dfcolor, max_err_ct, sim)) {
                                 vp.push_back(point_t(j + _x1 + _dx, i + _y1 + _dy));
                             }
 
@@ -904,7 +900,7 @@ long ImageSearchAlgorithms::FindPicExTh(std::vector<PicMatchTemplate *> &pics, c
                     }     // end for i
                     return vp;
                 },
-                blocks[i], pic, use_ts_match, sim));
+                blocks[i], sim));
             // results.push_back(r);
         }
         // wait all
@@ -1170,6 +1166,36 @@ long ImageSearchAlgorithms::real_match(long x, long y, ImageBin *timg, int tnorm
     }
 
     return 1;
+}
+
+long ImageSearchAlgorithms::real_color_match(long x, long y, Image *timg, color_t dfcolor, int max_error) {
+    const int h = timg->height;
+    const int w = timg->width;
+    int err_ct = 0;
+    // 逐像素按通道容差比较；错位区域通常头几行就超限退出，不需要额外预筛。
+    for (int i = 0; i < h; ++i) {
+        const color_t *psrc = _src.ptr<color_t>(y + i) + x;
+        const color_t *ptpl = timg->ptr<color_t>(i);
+        for (int j = 0; j < w; ++j) {
+            if (!IN_RANGE(psrc[j], ptpl[j], dfcolor)) {
+                if (++err_ct > max_error)
+                    return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+long ImageSearchAlgorithms::match_at(long x, long y, PicMatchTemplate *match, color_t dfcolor, int max_error,
+                                     double sim) {
+    if (!match || !match->image)
+        return 0;
+    // 透明模板本来就走彩色容差，彩色模式因此复用同一条路径。
+    if (match->transparent_count)
+        return trans_match<false>(x, y, match->image, dfcolor, match->transparent_points, max_error);
+    if (_pic_color_match)
+        return real_color_match(x, y, match->image, dfcolor, max_error);
+    return real_match(x, y, &match->gray, match->gray_norm, sim);
 }
 
 void ImageSearchAlgorithms::record_sum(const ImageBin &gray) {

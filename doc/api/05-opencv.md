@@ -91,16 +91,16 @@
   细化（骨架化），`mode` 选择细化算法。
 
 - **`void CvMatchTemplate(_In_ long x, _In_ long y, _In_ long width, _In_ long height, _In_ const wchar_t *template_name, _In_ double threshold, _In_ long dir, _In_ long strip_mode, _In_ long method, _In_ long color_mode, _Out_ std::wstring &retjson, _Out_ long *ret)`** → `void`
-  在**当前捕获图**的 `x,y,width,height` 区域内匹配单模板。出参 JSON：`{"ok":1,"x":..,"y":..,"width":..,"height":..,"score":..}`，失败是 `{"ok":0}`。
+  在**当前捕获图**的 `x,y,width,height` 区域内匹配单模板。出参 JSON：`{"ok":1,"x":..,"y":..,"width":..,"height":..,"score":..}`，失败是 `{"ok":0}`。`color_mode` 传 `0` 直接比彩色像素（不转灰度），传 `1` 先把搜索图与模板都转成灰度再匹配。
 
 - **`void CvMatchTemplateScale(_In_ long x, _In_ long y, _In_ long width, _In_ long height, _In_ const wchar_t *template_name, _In_ const wchar_t *scales, _In_ double threshold, _In_ long method, _In_ long color_mode, _Out_ std::wstring &retjson, _Out_ long *ret)`** → `void`
-  同上，但会按 `scales`（如 `1.0|0.9|1.1`）逐档缩放模板后再匹配，用于目标大小不确定的场景。
+  同上，但会按 `scales`（如 `1.0|0.9|1.1`）逐档缩放模板后再匹配，用于目标大小不确定的场景。`color_mode` 语义同 `CvMatchTemplate`：`0` 彩色、`1` 灰度。
 
 - **`void CvMatchAnyTemplate(_In_ long x, _In_ long y, _In_ long width, _In_ long height, _In_ const wchar_t *template_names, _In_ double threshold, _In_ long dir, _In_ long strip_mode, _In_ long method, _In_ long color_mode, _Out_ std::wstring &retjson, _Out_ long *ret)`** → `void`
-  在多个模板里取最先命中的那个。`template_names` 用 `|` 分隔。
+  在多个模板里取最先命中的那个。`template_names` 用 `|` 分隔。`color_mode` 语义同 `CvMatchTemplate`：`0` 彩色、`1` 灰度。
 
 - **`void CvMatchAllTemplates(_In_ long x, _In_ long y, _In_ long width, _In_ long height, _In_ const wchar_t *template_names, _In_ double threshold, _In_ long dir, _In_ long strip_mode, _In_ long method, _In_ long color_mode, _Out_ std::wstring &retjson, _Out_ long *ret)`** → `void`
-  把区域内所有模板的所有命中位置都返回，出参是多条 JSON。
+  把区域内所有模板的所有命中位置都返回，出参是多条 JSON。`color_mode` 语义同 `CvMatchTemplate`：`0` 彩色、`1` 灰度。
 
 - **`void CvFeatureMatchTemplate(_In_ long x, _In_ long y, _In_ long width, _In_ long height, _In_ const wchar_t *template_name, _In_ double threshold, _Out_ std::wstring &retjson, _Out_ long *ret)`** → `void`
   特征点匹配（对缩放、旋转、光照变化更稳，但比模板匹配慢）。出参同样是 JSON。

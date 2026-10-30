@@ -196,6 +196,21 @@ STDMETHODIMP OpAutomation::EnablePicCache(LONG enable, LONG *ret) {
     }
 }
 
+STDMETHODIMP OpAutomation::SetFindPicColor(LONG enable, LONG *ret) {
+    try {
+
+        obj.SetFindPicColor(enable, ret);
+
+        return S_OK;
+
+    } catch (...) {
+        if (ret) {
+            *ret = 0;
+        }
+        return E_UNEXPECTED;
+    }
+}
+
 STDMETHODIMP OpAutomation::CapturePre(BSTR file, LONG *ret) {
     try {
         file = SafeBstr(file);

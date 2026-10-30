@@ -28,6 +28,7 @@ var (
 	procSleep                  *windows.LazyProc
 	procInjectDll              *windows.LazyProc
 	procEnablePicCache         *windows.LazyProc
+	procSetFindPicColor        *windows.LazyProc
 	procCapturePre             *windows.LazyProc
 	procSetScreenDataMode      *windows.LazyProc
 	procAStarFindPath          *windows.LazyProc
@@ -257,6 +258,7 @@ func bindProcs() {
 	procSleep = dll.NewProc("OpSleep")
 	procInjectDll = dll.NewProc("OpInjectDll")
 	procEnablePicCache = dll.NewProc("OpEnablePicCache")
+	procSetFindPicColor = dll.NewProc("OpSetFindPicColor")
 	procCapturePre = dll.NewProc("OpCapturePre")
 	procSetScreenDataMode = dll.NewProc("OpSetScreenDataMode")
 	procAStarFindPath = dll.NewProc("OpAStarFindPath")

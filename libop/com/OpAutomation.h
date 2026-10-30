@@ -76,6 +76,8 @@ class ATL_NO_VTABLE OpAutomation
     STDMETHOD(InjectDll)(BSTR process_name, BSTR dll_name, LONG *ret);
     // 设置是否开启或者关闭插件内部的图片缓存机制
     STDMETHOD(EnablePicCache)(LONG enable, LONG *ret);
+    // 设置找图的比较方式：0=灰度(默认)，1=彩色逐通道容差
+    STDMETHOD(SetFindPicColor)(LONG enable, LONG *ret);
     // 取上次操作的图色区域，保存为file(24位位图)
     STDMETHOD(CapturePre)(BSTR file_name, LONG *ret);
     // 设置屏幕数据模式，0:从上到下(默认),1:从下到上

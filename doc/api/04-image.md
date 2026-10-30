@@ -1,10 +1,10 @@
 # 图像与颜色
 
-`op::Op` 的这一组接口共 **22** 个。返回索引：[doc/api.md](../api.md)
+`op::Op` 的这一组接口共 **23** 个。返回索引：[doc/api.md](../api.md)
 
 > 通用约定（`long *ret` 的含义、坐标语义、线程安全、C API 命名映射）见 [索引页](../api.md#通用约定)。
 
-## image and color（22）
+## image and color（23）
 
 - **`void Capture(_In_ long x1, _In_ long y1, _In_ long x2, _In_ long y2, _In_ const wchar_t *file_name, _Out_ long *ret)`** → `void`
   抓取指定区域(x1, y1, x2, y2)的图像, 保存为file。 x2/y2 是右下角开区间: 实际宽 = x2-x1、高 = y2-y1, 所以 Capture(0, 0, 319, 239) 存下来的是 319x239 的图。
@@ -28,13 +28,16 @@
   根据指定的多点查找所有颜色坐标
 
 - **`void FindPic(_In_ long x1, _In_ long y1, _In_ long x2, _In_ long y2, _In_ const wchar_t *files, _In_ const wchar_t *delta_color, _In_ double sim, _In_ long dir, _Out_ long *x, _Out_ long *y, _Out_ long *ret)`** → `void`
-  查找指定区域内的图片
+  在 `x1,y1,x2,y2` 区域内按 `files` 里的图片（`|` 分隔）逐个找，命中返回图片序号。**默认是灰度比较**：搜索图与模板都先转成灰度再按像素差累加，亮度相同、色相不同的目标分不开，同亮度不同色会误命中；要按颜色区分就先调 `SetFindPicColor(1)`。`sim` 是要求匹配上的比例（内部压缩成 `0.5 + sim/2`），`delta_color` 形如 `RRGGBB`，只有彩色模式和透明图模板才当逐通道容差用。
 
 - **`void FindPicEx(_In_ long x1, _In_ long y1, _In_ long x2, _In_ long y2, _In_ const wchar_t *files, _In_ const wchar_t *delta_color, _In_ double sim, _In_ long dir, _Out_ std::wstring &retstr)`** → `void`
-  查找多个图片
+  对 `files` 里的每张图都找一遍全部命中位置，出参形如 `"图片名,x,y|图片名,x,y"`，命中不到任何图时字符串里不含该项。比较方式同 `FindPic`，默认灰度，彩色要先 `SetFindPicColor(1)`。
 
 - **`void FindPicExS(_In_ long x1, _In_ long y1, _In_ long x2, _In_ long y2, _In_ const wchar_t *files, _In_ const wchar_t *delta_color, _In_ double sim, _In_ long dir, _Out_ std::wstring &retstr)`** → `void`
-  这个函数可以查找多个图片, 并且返回所有找到的图像的坐标.此函数同FindPicEx.只是返回值不同.(file1,x,y|file2,x,y|...)
+  同 `FindPicEx`，只是文件名用 `|` 分隔且出参不带图片名，形如 `"文件,x,y|文件,x,y"`。比较方式同 `FindPic`，默认灰度，彩色要先 `SetFindPicColor(1)`。
+
+- **`void SetFindPicColor(_In_ long enable, _Out_ long *ret)`** → `void`
+  设置 `FindPic` 系列的比较方式。默认 `0`：搜索图与模板都转成灰度后按像素差累加比较（旧行为）。传 `1` 改为彩色逐通道比较，`delta_color` 表示每通道允许偏差、`sim` 表示要求匹配上的像素比例（内部压缩成 `0.5 + sim/2`）；透明图模板无论这个开关如何都走彩色逐通道比较。彩色能分辨灰度相同但颜色不同的目标，代价是同一条 `sim` 在两种模式下尺度不同，切换后要重新标定。
 
 - **`void FindColorBlock(_In_ long x1, _In_ long y1, _In_ long x2, _In_ long y2, _In_ const wchar_t *color, _In_ double sim, _In_ long count, _In_ long height, _In_ long width, _Out_ long *x, _Out_ long *y, _Out_ long *ret)`** → `void`
   查找指定区域内的颜色块,颜色格式"RRGGBB-DRDGDB",注意,和按键的颜色格式相反

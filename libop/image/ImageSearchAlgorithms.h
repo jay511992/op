@@ -86,6 +86,15 @@ class ImageSearchAlgorithms {
 
     void set_offset(int x1, int y1);
 
+    // 找图的比较方式：false=灰度 SAD（默认，旧行为），true=彩色逐通道容差。
+    void set_pic_color_match(bool on) {
+        _pic_color_match = on;
+    }
+
+    bool pic_color_match() const {
+        return _pic_color_match;
+    }
+
     long is_valid(long x, long y) {
         return x >= 0 && y >= 0 && x < _src.width && y < _src.height;
     }
@@ -143,6 +152,10 @@ class ImageSearchAlgorithms {
     long trans_match(long x, long y, Image *timg, color_t dfcolor, const vector<uint> &points, int max_error);
     // 灰度匹配
     long real_match(long x, long y, ImageBin *timg, int tnorm, double sim);
+    // 彩色匹配：逐像素按 dfcolor 容差比较 BGR，允许 max_error 个像素失配
+    long real_color_match(long x, long y, Image *timg, color_t dfcolor, int max_error);
+    // 单点分派：透明模板与彩色模式走彩色容差，其余走灰度 SAD
+    long match_at(long x, long y, PicMatchTemplate *match, color_t dfcolor, int max_error, double sim);
     // 记录和
     void record_sum(const ImageBin &gray);
     //[x1,x2),[y1,y2)
@@ -178,6 +191,7 @@ class ImageSearchAlgorithms {
 
   public:
     Image _src;
+    bool _pic_color_match = false;
     ImageBin _gray;
     ImageBin _record;
     ImageBin _binary;

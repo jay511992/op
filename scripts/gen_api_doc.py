@@ -74,10 +74,14 @@ EXTRA_DOC = {
     # ---- OpenCV：在当前捕获图上匹配 ----
     # 这一组的 x/y/width/height 是“当前捕获图上的矩形”，不是屏幕坐标也不是窗口坐标。
     "CvMatchTemplate": "在**当前捕获图**的 `x,y,width,height` 区域内匹配单模板。出参 JSON：`{\"ok\":1,\"x\":..,\"y\":..,"
-                       "\"width\":..,\"height\":..,\"score\":..}`，失败是 `{\"ok\":0}`。",
-    "CvMatchTemplateScale": "同上，但会按 `scales`（如 `1.0|0.9|1.1`）逐档缩放模板后再匹配，用于目标大小不确定的场景。",
-    "CvMatchAnyTemplate": "在多个模板里取最先命中的那个。`template_names` 用 `|` 分隔。",
-    "CvMatchAllTemplates": "把区域内所有模板的所有命中位置都返回，出参是多条 JSON。",
+                       "\"width\":..,\"height\":..,\"score\":..}`，失败是 `{\"ok\":0}`。"
+                       "`color_mode` 传 `0` 直接比彩色像素（不转灰度），传 `1` 先把搜索图与模板都转成灰度再匹配。",
+    "CvMatchTemplateScale": "同上，但会按 `scales`（如 `1.0|0.9|1.1`）逐档缩放模板后再匹配，用于目标大小不确定的场景。"
+                            "`color_mode` 语义同 `CvMatchTemplate`：`0` 彩色、`1` 灰度。",
+    "CvMatchAnyTemplate": "在多个模板里取最先命中的那个。`template_names` 用 `|` 分隔。"
+                          "`color_mode` 语义同 `CvMatchTemplate`：`0` 彩色、`1` 灰度。",
+    "CvMatchAllTemplates": "把区域内所有模板的所有命中位置都返回，出参是多条 JSON。"
+                           "`color_mode` 语义同 `CvMatchTemplate`：`0` 彩色、`1` 灰度。",
     "CvFeatureMatchTemplate": "特征点匹配（对缩放、旋转、光照变化更稳，但比模板匹配慢）。出参同样是 JSON。",
     "CvEdgeMatchTemplate": "基于边缘的模板匹配，适合背景杂乱但目标轮廓清晰的场景。",
     "CvShapeMatchTemplate": "基于形状的匹配，适合目标内部纹理变化大、只有外形稳定的场景。",
@@ -88,6 +92,21 @@ EXTRA_DOC = {
     "YoloDetect": "在**当前捕获图**的 `x1,y1,x2,y2` 区域内做目标检测，`conf` 是置信度门限、`iou` 是 NMS 的 IoU 门限，"
                   "出参是 JSON。",
     "YoloDetectFromFile": "对指定图片文件做目标检测，参数与出参同 `YoloDetect`。",
+
+    # ---- 找图 ----
+    "FindPic": "在 `x1,y1,x2,y2` 区域内按 `files` 里的图片（`|` 分隔）逐个找，命中返回图片序号。"
+               "**默认是灰度比较**：搜索图与模板都先转成灰度再按像素差累加，亮度相同、色相不同的目标分不开，"
+               "同亮度不同色会误命中；要按颜色区分就先调 `SetFindPicColor(1)`。"
+               "`sim` 是要求匹配上的比例（内部压缩成 `0.5 + sim/2`），`delta_color` 形如 `RRGGBB`，"
+               "只有彩色模式和透明图模板才当逐通道容差用。",
+    "FindPicEx": "对 `files` 里的每张图都找一遍全部命中位置，出参形如 `\"图片名,x,y|图片名,x,y\"`，"
+                 "命中不到任何图时字符串里不含该项。比较方式同 `FindPic`，默认灰度，彩色要先 `SetFindPicColor(1)`。",
+    "FindPicExS": "同 `FindPicEx`，只是文件名用 `|` 分隔且出参不带图片名，形如 `\"文件,x,y|文件,x,y\"`。"
+                  "比较方式同 `FindPic`，默认灰度，彩色要先 `SetFindPicColor(1)`。",
+    "SetFindPicColor": "设置 `FindPic` 系列的比较方式。默认 `0`：搜索图与模板都转成灰度后按像素差累加比较（旧行为）。"
+                       "传 `1` 改为彩色逐通道比较，`delta_color` 表示每通道允许偏差、`sim` 表示要求匹配上的像素比例"
+                       "（内部压缩成 `0.5 + sim/2`）；透明图模板无论这个开关如何都走彩色逐通道比较。"
+                       "彩色能分辨灰度相同但颜色不同的目标，代价是同一条 `sim` 在两种模式下尺度不同，切换后要重新标定。",
 
     # ---- 内存读写 ----
     # hwnd 传 0 表示“当前绑定窗口”；本进程走 memcpy，跨进程走注入读取。
@@ -301,7 +320,7 @@ def render_items(out, section):
     for item in section["items"]:
         signature = "%s %s(%s)" % (item["ret"], item["name"], item["params"])
         out.append("- **`%s`** → `%s`" % (signature, item["ret"]))
-        doc = item["doc"] or EXTRA_DOC.get(item["name"], "")
+        doc = EXTRA_DOC.get(item["name"]) or item["doc"] or ""
         if doc:
             out.append("  %s" % doc)
         else:

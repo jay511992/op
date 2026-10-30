@@ -166,6 +166,9 @@ class Op:
     def enable_pic_cache(self, enable: bool | int) -> bool:
         return self._call_ok("OpEnablePicCache", int(enable))
 
+    def set_find_pic_color(self, enable: bool | int) -> bool:
+        return self._call_ok("OpSetFindPicColor", int(enable))
+
     def capture_pre(self, file_name: str | Path) -> bool:
         return self._call_ok("OpCapturePre", str(file_name))
 
@@ -978,7 +981,7 @@ class Op:
         direction: constants.SearchDirection | int = constants.SearchDirection.LEFT_TO_RIGHT,
         strip_mode: constants.Strip | int = constants.Strip.NONE,
         method: constants.MatchMethod | int = constants.MatchMethod.SQDIFF_NORMED,
-        color_mode: constants.MatchColor | int = constants.MatchColor.GRAY,
+        color_mode: constants.MatchColor | int = constants.MatchColor.COLOR,
     ) -> str:
         return self._call_string(
             "OpCvMatchTemplate",
@@ -1004,7 +1007,7 @@ class Op:
         scales: str,
         threshold: float,
         method: constants.MatchMethod | int = constants.MatchMethod.SQDIFF_NORMED,
-        color_mode: constants.MatchColor | int = constants.MatchColor.GRAY,
+        color_mode: constants.MatchColor | int = constants.MatchColor.COLOR,
     ) -> str:
         return self._call_string(
             "OpCvMatchTemplateScale",
@@ -1030,7 +1033,7 @@ class Op:
         direction: constants.SearchDirection | int = constants.SearchDirection.LEFT_TO_RIGHT,
         strip_mode: constants.Strip | int = constants.Strip.NONE,
         method: constants.MatchMethod | int = constants.MatchMethod.SQDIFF_NORMED,
-        color_mode: constants.MatchColor | int = constants.MatchColor.GRAY,
+        color_mode: constants.MatchColor | int = constants.MatchColor.COLOR,
     ) -> str:
         return self._call_string(
             "OpCvMatchAnyTemplate",
@@ -1057,7 +1060,7 @@ class Op:
         direction: constants.SearchDirection | int = constants.SearchDirection.LEFT_TO_RIGHT,
         strip_mode: constants.Strip | int = constants.Strip.NONE,
         method: constants.MatchMethod | int = constants.MatchMethod.SQDIFF_NORMED,
-        color_mode: constants.MatchColor | int = constants.MatchColor.GRAY,
+        color_mode: constants.MatchColor | int = constants.MatchColor.COLOR,
     ) -> str:
         return self._call_string(
             "OpCvMatchAllTemplates",

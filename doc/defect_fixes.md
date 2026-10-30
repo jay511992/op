@@ -6724,3 +6724,71 @@ ctest 的控制台日志会被下一次成功跑覆盖），但那套模板写�
    （`libop/capture/backends/HookCapture.cpp:645` 的 `src_width`）。两者不等时
    `FrameExchangeOffset` 算出的偏移不同，宿主根本读不到注入侧写的那个位置 —— 这个信号不可靠。
 3. 帧头三字段已经够区分三种原因，不需要新字段。
+
+### 72.66 找图只有灰度一条比较路：同亮度不同色永远误命中（第 102 批）
+
+**问题**
+
+`FindPic` / `FindPicEx` / `FindPicExS` 三个入口最终都落到 `ImageSearchAlgorithms` 的两个线程版
+（`FindPicTh` / `FindPicExTh`）和两个单线程版（`FindPic` / `FindPicEx`），而这些实现此前只有一种比较方式：
+模板在 `build_pic_match_template` 里转成灰度 `ImageBin`（`libop/image/ImageSearchAlgorithms.cpp:154-167`），
+屏幕整图再 `_gray.fromImage4(_src)` + `record_sum(_gray)`，最后 `real_match` 用积分图预筛 +
+灰度差累加定胜负（`libop/image/ImageSearchAlgorithms.cpp:1154-1173`）。
+灰度公式是 `(r*299 + g*587 + b*114 + 500) / 1000`（`libop/image/Image.h:474-483`）。
+
+后果：BT.601 灰度相同的两种颜色在灰度图里逐像素相同。红 `(255,0,0)` 与绿 `(0,129,0)` 的灰度都是 **76**，
+红绿互换的画面必然误命中。`delta_color` 那时只有透明背景模板走的 `trans_match` 分支用得上，
+非透明模板传什么都没用 —— 参数在文档里写着"颜色偏移容差"，实际被丢掉。
+
+**改法**
+
+1. `ImageSearchAlgorithms` 加 `_pic_color_match`（默认 `false`，等于旧行为）与 `set_pic_color_match()`；
+   新增 `real_color_match()`：逐像素 `IN_RANGE(psrc[j], ptpl[j], dfcolor)` 计失配数，超过
+   `max_error = (h*w - transparent_count) * (1 - sim)` 立即返回 0。
+2. 抽出 `match_at(x, y, match, dfcolor, max_error, sim)` 单点分派：透明模板 → `trans_match<false>`；
+   彩色开关打开 → `real_color_match`；否则 → `real_match`。四处扫描调用点统一走它，
+   线程 lambda 的形参从 `(rect_t block, Image *pic, int use_ts_match, double sim)` 收窄成
+   `(rect_t block, double sim)`，`pgimg` 那两行删掉。
+3. 三处 `_gray.fromImage4` + `record_sum` 加 `if (!_pic_color_match)` 守卫 —— 彩色模式下不再
+   花一次全屏灰度转换和一次积分图遍历。
+4. 对外新增 `SetFindPicColor(enable)`：`include/libop.h`（按项目约定头文件不写注释）、
+   `libop/op/OpImage.cpp`、`libop/com/op.idl` `id(350)`、`OpAutomation.h/.cpp`、
+   C API `OpSetFindPicColor`、SWIG 重生成（`swig/op_wrap.cxx` + `python/pyop/_binding.py`）、
+   Python `set_find_pic_color`、Go `SetFindPicColor`。说明写进 `scripts/gen_api_doc.py` 的 `EXTRA_DOC`，
+   由生成器落到 `doc/api/04-image.md`。
+5. 顺手改了生成器的取说明优先级：`EXTRA_DOC` 现在**覆盖**头文件注释（原来反过来）。
+   全仓只有 `FindPic` / `FindPicEx` / `FindPicExS` 这轮同时存在两者，所以切换只影响这三条。
+
+默认值保持灰度是刻意的：`sim` 与 `delta_color` 在两种模式下尺度不同（灰度是像素差累加，
+彩色是逐通道容差 + 失配比例），直接改默认会让所有现役脚本的标定当场失效。
+
+**验证**
+
+- `swig -python -c++ op.i` 重生成成功，说明 `include/libop.h` 仍能被 SWIG 干净解析；
+  `python -m py_compile` 对 `api.py` / `_ffi.py` / `_binding.py` / `gen_api_doc.py` 全通过。
+- `python scripts/api_coverage.py`：C API 187/187、COM 215/215、缺口 0。
+- 新增 `ImageColorTest.FindPicColorSwitchDistinguishesSameLumaDifferentHue`：
+  屏幕 20×10 白底 + `(6,2)` 起 4×4 的红绿反向棋盘，模板是颜色相反的棋盘（灰度逐像素相同）。
+  断言默认灰度模式命中 `(6,2)` → `SetFindPicColor(1)` 后同一调用必须 `-1` →
+  关回灰度又命中 → 末尾经 C API（`OpCreate` / `OpSetFindPicColor` / `OpDestroy`）再走一遍。
+  4×4 反向棋盘的四角是 A/B/B/A，不会触发"四角同色且过半 → 当透明模板"的判定。
+- `clang-format 16` 比对：新增行零差异，未引入换行符混用。
+- **x64 全量构建通过**（`python build.py`，VS2022 BuildTools + vcpkg + BlackBone + OpenCV 5.0.0
+  静态库）：`op_x64.dll`、`op_c_api_x64.dll`、`_pyop.pyd`、`tools.dll`、`op_inject64.exe` 全部产出。
+  首次构建在 MIDL 阶段抓到一处真错：`op.idl(268): error MIDL2021: duplicate id` —— 原写
+  `id(336)` 与 `MiddleDoubleClick` 撞号（idl 里的 id 不是按顺序排的，当时最大已是 349），
+  改 `id(350)` 后 MIDL 通过。**这条只有真编译才暴露**，纯读代码看不出来。
+- `ctest -C Release`（x64）：**33/34 通过**。唯一失败 `wgc_RepeatedBindUnbindAndMaximizedRepeatedCapture`，
+  日志是 `wgc init step=0 activation_factory` + `activation factory unknown exception`（同进程里
+  四次 WGC 绑定解绑）；本次改动不碰 capture/ 任何文件，且 `doc/defect_fixes.md` 第 5987 行记过
+  同一用例单条失败被判为环境抖动 —— 判定与本改动无关，未做回退 A/B。
+- 新增用例定向跑通：
+  `op_test.exe --gtest_filter="ImageColorTest.FindPicColorSwitchDistinguishesSameLumaDifferentHue:ApiSurface*"`
+  → 10/10 通过（含灰度命中 / 彩色拒绝 / 关回灰度再命中 / C API 开关返回 1）。
+- **x86 全量构建与回归也通过**：`op_x86.dll`、`op_c_api_x86.dll`、`tools.dll` 产出
+  （`_pyop.pyd` 跳过 —— 本机只有 64 位 Python，CMake 按既定策略 `Disable swig python build`），
+  `ctest -C Release` **34/34 全过**。同一个 `wgc_RepeatedBindUnbindAndMaximizedRepeatedCapture`
+  在 x86 上通过，反过来佐证 x64 那次失败是环境抖动而非代码问题。
+
+**没做的**：不把默认切成彩色（理由同上）；不给 `FindPic` 加逐个调用的 `color_mode` 形参
+（要同时改 C++/COM/C API/Go/Python 五面签名，还会打断既有脚本），要按图区分就调一次开关。
